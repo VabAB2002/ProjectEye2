@@ -3,8 +3,8 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../theme';
-import { ProjectsScreen } from '../screens/projects/ProjectsScreen';
-import { ProgressScreen } from '../screens/progress/ProgressScreen';
+import { ProjectNavigator } from './ProjectNavigator';
+import { ProgressNavigator } from './ProgressNavigator';
 import { FinancialScreen } from '../screens/financial/FinancialScreen';
 import { SettingsScreen } from '../screens/settings/SettingsScreen';
 
@@ -74,13 +74,16 @@ const TabNavigatorComponent: React.FC = () => {
     >
       <Tab.Screen 
         name="Projects" 
-        component={ProjectsScreen}
-        options={{ title: 'Projects' }}
+        component={ProjectNavigator}
+        options={{ 
+          title: 'Projects',
+          headerShown: false 
+        }}
       />
       <Tab.Screen 
         name="Progress" 
-        component={ProgressScreen}
-        options={{ title: 'Progress' }}
+        component={ProgressNavigator}
+        options={{ title: 'Progress', headerShown: false }}
       />
       <Tab.Screen 
         name="Financial" 

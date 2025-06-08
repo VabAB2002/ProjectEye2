@@ -8,8 +8,10 @@ import {
   ScrollView,
   Alert,
   TouchableOpacity,
+  StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/auth.store';
 import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
@@ -46,6 +48,8 @@ export const LoginScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor={theme.colors.background} />
+      
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
@@ -53,65 +57,100 @@ export const LoginScreen: React.FC = () => {
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.header}>
-            <Text style={styles.title}>ProjectEye</Text>
-            <Text style={styles.subtitle}>Construction Management</Text>
+          {/* Header Section */}
+          <View style={styles.headerSection}>
+            <View style={styles.logoContainer}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="construct" size={32} color={theme.colors.accent} />
+              </View>
+              <Text style={styles.appTitle}>ProjectEye</Text>
+              <Text style={styles.appSubtitle}>Construction Management</Text>
+            </View>
           </View>
 
-          <View style={styles.form}>
+          {/* Welcome Section */}
+          <View style={styles.welcomeSection}>
+            <Text style={styles.welcomeTitle}>Welcome back!</Text>
+            <Text style={styles.welcomeSubtitle}>
+              Sign in to access your construction projects
+            </Text>
+          </View>
+
+          {/* Form Section */}
+          <View style={styles.formSection}>
             <Input
               label="Email or Phone"
-              placeholder="Enter email or phone number"
+              placeholder="Enter your email or phone number"
               value={emailOrPhone}
               onChangeText={setEmailOrPhone}
               icon="person-outline"
               autoCapitalize="none"
               keyboardType="email-address"
+              variant="filled"
             />
 
             <Input
               label="Password"
-              placeholder="Enter password"
+              placeholder="Enter your password"
               value={password}
               onChangeText={setPassword}
               icon="lock-closed-outline"
               rightIcon={showPassword ? 'eye-off-outline' : 'eye-outline'}
               onRightIconPress={() => setShowPassword(!showPassword)}
               secureTextEntry={!showPassword}
+              variant="filled"
             />
 
-            <TouchableOpacity style={styles.forgotPassword}>
+            <TouchableOpacity style={styles.forgotPasswordContainer}>
               <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
             </TouchableOpacity>
 
             <Button
-              title="Login"
+              title="Sign In"
               onPress={handleLogin}
               loading={isLoading}
               style={styles.loginButton}
+              fullWidth
             />
 
-            <View style={styles.divider}>
+            <View style={styles.dividerContainer}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>OR</Text>
+              <View style={styles.dividerTextContainer}>
+                <Text style={styles.dividerText}>OR</Text>
+              </View>
               <View style={styles.dividerLine} />
             </View>
 
-            <TouchableOpacity style={styles.registerContainer}>
-              <Text style={styles.registerText}>
-                Don't have an account?{' '}
-                <Text style={styles.registerLink}>Sign Up</Text>
-              </Text>
-            </TouchableOpacity>
-          </View>
+            <Button
+              title="Sign In with Google"
+              variant="outline"
+              icon="logo-google"
+              style={styles.googleButton}
+              fullWidth
+            />
 
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>
-              By continuing, you agree to our Terms & Privacy Policy
-            </Text>
+            <View style={styles.signUpSection}>
+              <Text style={styles.signUpText}>
+                Don't have an account?{' '}
+              </Text>
+              <TouchableOpacity>
+                <Text style={styles.signUpLink}>Sign Up</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </ScrollView>
+
+        {/* Footer */}
+        <View style={styles.footerSection}>
+          <Text style={styles.footerText}>
+            By continuing, you agree to our{' '}
+            <Text style={styles.footerLink}>Terms of Service</Text>
+            {' '}and{' '}
+            <Text style={styles.footerLink}>Privacy Policy</Text>
+          </Text>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -129,37 +168,68 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: theme.spacing.xl,
   },
-  header: {
+  headerSection: {
     alignItems: 'center',
-    marginTop: theme.spacing.xxxl * 2,
-    marginBottom: theme.spacing.xxxl,
+    paddingTop: theme.spacing.xxl,
+    paddingBottom: theme.spacing.xl,
   },
-  title: {
-    fontSize: 36,
+  logoContainer: {
+    alignItems: 'center',
+  },
+  iconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 20,
+    backgroundColor: `${theme.colors.accent}10`,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: theme.spacing.lg,
+  },
+  appTitle: {
+    fontSize: 32,
     fontWeight: '800',
-    color: theme.colors.primary,
+    color: theme.colors.text,
     marginBottom: theme.spacing.xs,
+    letterSpacing: -0.5,
   },
-  subtitle: {
+  appSubtitle: {
     fontSize: 16,
     color: theme.colors.textSecondary,
+    fontWeight: '500',
   },
-  form: {
+  welcomeSection: {
+    marginBottom: theme.spacing.xxl,
+  },
+  welcomeTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: theme.colors.text,
+    marginBottom: theme.spacing.sm,
+    textAlign: 'center',
+  },
+  welcomeSubtitle: {
+    fontSize: 16,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  formSection: {
     flex: 1,
   },
-  forgotPassword: {
+  forgotPasswordContainer: {
     alignSelf: 'flex-end',
     marginBottom: theme.spacing.xl,
+    padding: theme.spacing.xs,
   },
   forgotPasswordText: {
     color: theme.colors.accent,
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   loginButton: {
     marginBottom: theme.spacing.xl,
   },
-  divider: {
+  dividerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     marginVertical: theme.spacing.xl,
@@ -167,25 +237,40 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: theme.colors.border,
+    backgroundColor: theme.colors.gray200,
+  },
+  dividerTextContainer: {
+    paddingHorizontal: theme.spacing.lg,
+    backgroundColor: theme.colors.background,
   },
   dividerText: {
-    marginHorizontal: theme.spacing.lg,
+    fontSize: 12,
     color: theme.colors.textSecondary,
-    fontSize: 14,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
-  registerContainer: {
+  googleButton: {
+    marginBottom: theme.spacing.xl,
+  },
+  signUpSection: {
+    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
+    paddingVertical: theme.spacing.lg,
   },
-  registerText: {
-    fontSize: 14,
+  signUpText: {
+    fontSize: 15,
     color: theme.colors.textSecondary,
+    fontWeight: '400',
   },
-  registerLink: {
+  signUpLink: {
+    fontSize: 15,
     color: theme.colors.accent,
     fontWeight: '600',
   },
-  footer: {
+  footerSection: {
+    paddingHorizontal: theme.spacing.xl,
     paddingVertical: theme.spacing.xl,
     alignItems: 'center',
   },
@@ -193,5 +278,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: theme.colors.textSecondary,
     textAlign: 'center',
+    lineHeight: 18,
+  },
+  footerLink: {
+    color: theme.colors.accent,
+    fontWeight: '600',
   },
 });
