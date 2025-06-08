@@ -1,0 +1,15 @@
+{
+  "dependencies": {
+    "@aws-sdk/s3-request-presigner": "^3.826.0",
+    "multer": "^2.0.1",
+    "sharp": "^0.34.2",
+    "tslib": "^2.8.1",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "@types/aws-sdk": "^0.0.42",
+    "@types/multer": "^1.4.12",
+    "@types/sharp": "^0.31.1",
+    "@types/uuid": "^10.0.0"
+  }
+}

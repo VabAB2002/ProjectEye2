@@ -1,0 +1,289 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  OWNER
+  PROJECT_MANAGER
+  CONTRACTOR
+  SUPERVISOR
+  VIEWER
+}
+
+enum OrganizationType {
+  INDIVIDUAL
+  COMPANY
+}
+
+enum ProjectType {
+  RESIDENTIAL
+  COMMERCIAL
+  INDUSTRIAL
+}
+
+enum ProjectStatus {
+  PLANNING
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+}
+
+enum TransactionType {
+  EXPENSE
+  PAYMENT
+  ADVANCE
+}
+
+enum PaymentMode {
+  CASH
+  BANK_TRANSFER
+  CHEQUE
+  UPI
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Organization {
+  id        String             @id @default(uuid())
+  name      String
+  type      OrganizationType
+  gstin     String?
+  phone     String?
+  email     String?
+  address   Json?
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  users    User[]
+  projects Project[]
+}
+
+model User {
+  id             String    @id @default(uuid())
+  email          String    @unique
+  phone          String    @unique
+  passwordHash   String?
+  firstName      String
+  lastName       String?
+  role           UserRole
+  language       String    @default("en")
+  isActive       Boolean   @default(true)
+  lastLogin      DateTime?
+  emailVerified  Boolean   @default(false)
+  phoneVerified  Boolean   @default(false)
+  profilePicture String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  projectMembers   ProjectMember[]
+  progressReports  ProgressUpdate[]
+  approvals        Transaction[]     @relation("ApprovedBy")
+  uploadedDocuments Document[]
+  notifications    Notification[]
+  sessions         Session[]
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  refreshToken String   @unique
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  
+  @@index([userId])
+}
+
+model Project {
+  id               String        @id @default(uuid())
+  name             String
+  type             ProjectType
+  description      String?
+  address          Json
+  startDate        DateTime
+  estimatedEndDate DateTime
+  actualEndDate    DateTime?
+  totalBudget      Decimal       @db.Decimal(12, 2)
+  status           ProjectStatus @default(PLANNING)
+  metadata         Json?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  members         ProjectMember[]
+  milestones      Milestone[]
+  progressUpdates ProgressUpdate[]
+  transactions    Transaction[]
+  materials       Material[]
+  documents       Document[]
+  
+  @@index([organizationId, status])
+}
+
+model ProjectMember {
+  id          String   @id @default(uuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id])
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  role        String
+  permissions Json
+  joinedAt    DateTime @default(now())
+
+  @@unique([projectId, userId])
+  @@index([projectId])
+  @@index([userId])
+}
+
+model Milestone {
+  id                 String   @id @default(uuid())
+  projectId          String
+  project            Project  @relation(fields: [projectId], references: [id])
+  name               String
+  description        String?
+  plannedStart       DateTime
+  plannedEnd         DateTime
+  actualStart        DateTime?
+  actualEnd          DateTime?
+  progressPercentage Int      @default(0)
+  status             String   @default("PENDING")
+  order              Int
+  parentId           String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  progressUpdates ProgressUpdate[]
+  
+  @@index([projectId, status])
+}
+
+model ProgressUpdate {
+  id               String   @id @default(uuid())
+  projectId        String
+  project          Project  @relation(fields: [projectId], references: [id])
+  milestoneId      String?
+  milestone        Milestone? @relation(fields: [milestoneId], references: [id])
+  reportedBy       String
+  reporter         User     @relation(fields: [reportedBy], references: [id])
+  date             DateTime @db.Date
+  workDescription  String
+  workersCount     Int?
+  weatherConditions String?
+  issues           String?
+  metadata         Json?
+  createdAt        DateTime @default(now())
+
+  photos ProgressPhoto[]
+  
+  @@unique([projectId, date])
+  @@index([projectId, date])
+}
+
+model ProgressPhoto {
+  id               String         @id @default(uuid())
+  progressUpdateId String
+  progressUpdate   ProgressUpdate @relation(fields: [progressUpdateId], references: [id])
+  fileUrl          String
+  thumbnailUrl     String?
+  caption          String?
+  location         Json?          // {lat, lng}
+  metadata         Json?
+  uploadedAt       DateTime       @default(now())
+  
+  @@index([progressUpdateId])
+}
+
+model Transaction {
+  id             String         @id @default(uuid())
+  projectId      String
+  project        Project        @relation(fields: [projectId], references: [id])
+  type           TransactionType
+  category       String
+  amount         Decimal        @db.Decimal(12, 2)
+  description    String?
+  vendorName     String?
+  billNumber     String?
+  billDate       DateTime?
+  paymentMode    PaymentMode
+  approvalStatus ApprovalStatus @default(PENDING)
+  approvedBy     String?
+  approver       User?          @relation("ApprovedBy", fields: [approvedBy], references: [id])
+  approvedAt     DateTime?
+  receiptUrl     String?
+  metadata       Json?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  
+  @@index([projectId, type, createdAt])
+  @@index([approvalStatus])
+}
+
+model Material {
+  id                    String   @id @default(uuid())
+  projectId             String
+  project               Project  @relation(fields: [projectId], references: [id])
+  name                  String
+  brand                 String?
+  category              String
+  quantity              Decimal  @db.Decimal(10, 2)
+  unit                  String
+  rate                  Decimal? @db.Decimal(10, 2)
+  totalCost             Decimal? @db.Decimal(12, 2)
+  deliveryDate          DateTime?
+  qualityCertificateUrl String?
+  verifiedBy            String?
+  metadata              Json?
+  createdAt             DateTime @default(now())
+  
+  @@index([projectId, category])
+}
+
+model Document {
+  id         String   @id @default(uuid())
+  projectId  String
+  project    Project  @relation(fields: [projectId], references: [id])
+  category   String
+  name       String
+  fileUrl    String
+  version    Int      @default(1)
+  sizeBytes  BigInt
+  mimeType   String
+  uploadedBy String
+  uploader   User     @relation(fields: [uploadedBy], references: [id])
+  isLatest   Boolean  @default(true)
+  metadata   Json?
+  createdAt  DateTime @default(now())
+  
+  @@index([projectId, category])
+  @@index([projectId, name, version])
+}
+
+model Notification {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  type       String
+  title      String
+  message    String
+  data       Json?
+  read       Boolean  @default(false)
+  readAt     DateTime?
+  createdAt  DateTime @default(now())
+  
+  @@index([userId, read])
+  @@index([createdAt])
+}
