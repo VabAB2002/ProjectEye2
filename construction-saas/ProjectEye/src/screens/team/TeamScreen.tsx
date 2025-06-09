@@ -9,32 +9,36 @@ import {
   FlatList,
   StatusBar,
   Animated,
+  Alert,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../theme';
-import { useMilestoneStore } from '../../store/milestone.store';
+import { useTeamStore } from '../../store/team.store';
 import { useProjectStore } from '../../store/project.store';
 import { useAuthStore } from '../../store/auth.store';
+import { TeamMember } from '../../api/endpoints/team.api';
+import { formatUserName } from '../../utils/userUtils';
 
-export const MilestoneListScreen: React.FC = () => {
+export const TeamScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const { user } = useAuthStore();
   const { projects, currentProject } = useProjectStore();
-  const { milestones, isLoading, fetchMilestones, createFromTemplate } = useMilestoneStore();
+  const { members, isLoading, fetchMembers, removeMember } = useTeamStore();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
     currentProject?.id || projects[0]?.id || null
   );
-  const [filterStatus, setFilterStatus] = useState<string | null>(null);
+  const [filterRole, setFilterRole] = useState<string | null>(null);
   const [fadeAnim] = useState(new Animated.Value(0));
 
   useEffect(() => {
     if (selectedProjectId) {
-      loadMilestoneData();
+      loadTeamData();
     }
-  }, [selectedProjectId, filterStatus]);
+  }, [selectedProjectId, filterRole]);
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -44,80 +48,111 @@ export const MilestoneListScreen: React.FC = () => {
     }).start();
   }, []);
 
-  const loadMilestoneData = async () => {
+  const loadTeamData = async () => {
     if (!selectedProjectId) return;
-    
-    await fetchMilestones(selectedProjectId, {
-      status: filterStatus,
-    });
+    await fetchMembers(selectedProjectId);
   };
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await loadMilestoneData();
+    await loadTeamData();
     setRefreshing(false);
   };
 
-  const handleCreateMilestone = () => {
+  const handleAddMember = () => {
     if (!selectedProjectId) {
-      alert('Please select a project first');
+      Alert.alert('Error', 'Please select a project first');
       return;
     }
-    navigation.navigate('CreateMilestone' as never, { projectId: selectedProjectId } as never);
+    navigation.navigate('AddMember' as never, { projectId: selectedProjectId } as never);
   };
 
-  const handleMilestonePress = (milestoneId: string) => {
-    navigation.navigate('MilestoneDetails' as never, { milestoneId } as never);
+  const handleMemberPress = (member: TeamMember) => {
+    navigation.navigate('MemberDetails' as never, { 
+      projectId: selectedProjectId,
+      memberId: member.id,
+      userId: member.userId 
+    } as never);
   };
 
-  const handleCreateFromTemplate = async (templateType: 'RESIDENTIAL' | 'COMMERCIAL') => {
-    if (!selectedProjectId) return;
-    
-    try {
-      await createFromTemplate(selectedProjectId, templateType);
-      await loadMilestoneData();
-    } catch (error) {
-      console.error('Failed to create from template:', error);
+  const handleCallMember = (phone?: string) => {
+    if (phone) {
+      Linking.openURL(`tel:${phone}`);
+    } else {
+      Alert.alert('No Phone Number', 'This member has no phone number on file');
     }
   };
 
-  // Calculate milestone statistics
-  const getMilestoneStats = () => {
-    const total = milestones.length;
-    const completed = milestones.filter(m => m.status === 'COMPLETED').length;
-    const inProgress = milestones.filter(m => m.status === 'IN_PROGRESS').length;
-    const overdue = milestones.filter(m => {
-      const endDate = new Date(m.plannedEnd);
-      const today = new Date();
-      return endDate < today && m.status !== 'COMPLETED';
-    }).length;
-    const completionPercentage = total > 0 ? (completed / total) * 100 : 0;
-
-    return { total, completed, inProgress, overdue, completionPercentage };
-  };
-
-  const getMilestoneIcon = (status: string): keyof typeof Ionicons.glyphMap => {
-    switch (status) {
-      case 'COMPLETED': return 'checkmark-circle';
-      case 'IN_PROGRESS': return 'play-circle';
-      case 'DELAYED': return 'warning-outline';
-      default: return 'radio-button-off';
+  const handleRemoveMember = (member: TeamMember) => {
+    if (member.role === 'OWNER') {
+      Alert.alert('Cannot Remove Owner', 'Project owner cannot be removed from the team');
+      return;
     }
+
+    Alert.alert(
+      'Remove Team Member',
+      `Are you sure you want to remove ${formatUserName(member.user.firstName, member.user.lastName)} from this project?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await removeMember(selectedProjectId!, member.userId);
+              Alert.alert('Success', 'Team member removed successfully');
+            } catch (error) {
+              Alert.alert('Error', 'Failed to remove team member');
+            }
+          },
+        },
+      ]
+    );
   };
 
-  const getMilestoneColor = (status: string) => {
-    switch (status) {
-      case 'COMPLETED': return '#10B981';
-      case 'IN_PROGRESS': return '#F59E0B';
-      case 'DELAYED': return '#EF4444';
+  // Calculate team statistics
+  const getTeamStats = () => {
+    const total = members.length;
+    const owners = members.filter(m => m.role === 'OWNER').length;
+    const managers = members.filter(m => m.role === 'PROJECT_MANAGER').length;
+    const contractors = members.filter(m => m.role === 'CONTRACTOR').length;
+    const supervisors = members.filter(m => m.role === 'SUPERVISOR').length;
+    const viewers = members.filter(m => m.role === 'VIEWER').length;
+
+    return { total, owners, managers, contractors, supervisors, viewers };
+  };
+
+  const getRoleColor = (role: string) => {
+    switch (role) {
+      case 'OWNER': return '#EF4444';
+      case 'PROJECT_MANAGER': return '#0066ff';
+      case 'CONTRACTOR': return '#10B981';
+      case 'SUPERVISOR': return '#F59E0B';
+      case 'VIEWER': return '#6B7280';
       default: return '#6B7280';
     }
   };
 
-  const getProgressColor = (percentage: number) => {
-    if (percentage >= 80) return '#10B981';
-    if (percentage >= 50) return '#F59E0B';
-    return '#EF4444';
+  const getRoleIcon = (role: string): keyof typeof Ionicons.glyphMap => {
+    switch (role) {
+      case 'OWNER': return 'star-outline';
+      case 'PROJECT_MANAGER': return 'briefcase-outline';
+      case 'CONTRACTOR': return 'hammer-outline';
+      case 'SUPERVISOR': return 'eye-outline';
+      case 'VIEWER': return 'people-outline';
+      default: return 'person-outline';
+    }
+  };
+
+  const getRoleLabel = (role: string) => {
+    switch (role) {
+      case 'OWNER': return 'Owner';
+      case 'PROJECT_MANAGER': return 'Manager';
+      case 'CONTRACTOR': return 'Contractor';
+      case 'SUPERVISOR': return 'Supervisor';
+      case 'VIEWER': return 'Viewer';
+      default: return role;
+    }
   };
 
   const renderSection = (title: string, icon: keyof typeof Ionicons.glyphMap, content: React.ReactNode) => (
@@ -137,64 +172,48 @@ export const MilestoneListScreen: React.FC = () => {
   );
 
   const renderOverview = () => {
-    const stats = getMilestoneStats();
+    const stats = getTeamStats();
     
-    return renderSection('Overview', 'analytics-outline', (
+    return renderSection('Team Overview', 'analytics-outline', (
       <View>
-        {/* Progress Bar */}
-        <View style={styles.progressContainer}>
-          <View style={styles.progressHeader}>
-            <Text style={styles.progressTitle}>Project Completion</Text>
-            <Text style={styles.progressPercentage}>{stats.completionPercentage.toFixed(1)}%</Text>
-          </View>
-          <View style={styles.progressBarContainer}>
-            <View 
-              style={[
-                styles.progressBar, 
-                { 
-                  width: `${Math.min(stats.completionPercentage, 100)}%`,
-                  backgroundColor: getProgressColor(stats.completionPercentage)
-                }
-              ]} 
-            />
-          </View>
-          <View style={styles.progressInfo}>
-            <Text style={[styles.progressText, { color: getProgressColor(stats.completionPercentage) }]}>
-              {stats.completed} of {stats.total} milestones completed
-            </Text>
+        {/* Team Size */}
+        <View style={styles.teamSizeContainer}>
+          <View style={styles.teamSizeHeader}>
+            <Text style={styles.teamSizeTitle}>Team Size</Text>
+            <Text style={styles.teamSizeValue}>{stats.total} member{stats.total !== 1 ? 's' : ''}</Text>
           </View>
         </View>
 
-        {/* Quick Stats */}
+        {/* Role Distribution */}
         <View style={styles.quickStatsGrid}>
-          <View style={styles.quickStatCard}>
-            <View style={[styles.quickStatIcon, { backgroundColor: '#10B98115' }]}>
-              <Ionicons name="checkmark-circle" size={20} color="#10B981" />
-            </View>
-            <Text style={styles.quickStatLabel}>Completed</Text>
-            <Text style={styles.quickStatValue}>{stats.completed}</Text>
-          </View>
-          
-          <View style={styles.quickStatCard}>
-            <View style={[styles.quickStatIcon, { backgroundColor: '#F59E0B15' }]}>
-              <Ionicons name="play-circle" size={20} color="#F59E0B" />
-            </View>
-            <Text style={styles.quickStatLabel}>In Progress</Text>
-            <Text style={styles.quickStatValue}>{stats.inProgress}</Text>
-          </View>
-          
-          {stats.overdue > 0 && (
-            <TouchableOpacity 
-              style={styles.quickStatCard}
-              onPress={() => setFilterStatus('DELAYED')}
-              activeOpacity={0.7}
-            >
+          {stats.owners > 0 && (
+            <View style={styles.quickStatCard}>
               <View style={[styles.quickStatIcon, { backgroundColor: '#EF444415' }]}>
-                <Ionicons name="warning-outline" size={20} color="#EF4444" />
+                <Ionicons name="star-outline" size={20} color="#EF4444" />
               </View>
-              <Text style={styles.quickStatLabel}>Overdue</Text>
-              <Text style={styles.quickStatValue}>{stats.overdue}</Text>
-            </TouchableOpacity>
+              <Text style={styles.quickStatLabel}>Owner</Text>
+              <Text style={styles.quickStatValue}>{stats.owners}</Text>
+            </View>
+          )}
+          
+          {stats.managers > 0 && (
+            <View style={styles.quickStatCard}>
+              <View style={[styles.quickStatIcon, { backgroundColor: '#0066ff15' }]}>
+                <Ionicons name="briefcase-outline" size={20} color="#0066ff" />
+              </View>
+              <Text style={styles.quickStatLabel}>Managers</Text>
+              <Text style={styles.quickStatValue}>{stats.managers}</Text>
+            </View>
+          )}
+          
+          {stats.contractors > 0 && (
+            <View style={styles.quickStatCard}>
+              <View style={[styles.quickStatIcon, { backgroundColor: '#10B98115' }]}>
+                <Ionicons name="hammer-outline" size={20} color="#10B981" />
+              </View>
+              <Text style={styles.quickStatLabel}>Contractors</Text>
+              <Text style={styles.quickStatValue}>{stats.contractors}</Text>
+            </View>
           )}
         </View>
       </View>
@@ -231,191 +250,183 @@ export const MilestoneListScreen: React.FC = () => {
   );
 
   const renderFilters = () => {
-    const statusFilters = [
-      { label: 'All Status', value: null },
-      { label: 'Pending', value: 'PENDING' },
-      { label: 'In Progress', value: 'IN_PROGRESS' },
-      { label: 'Completed', value: 'COMPLETED' },
-      { label: 'Delayed', value: 'DELAYED' },
+    const roleFilters = [
+      { label: 'All Roles', value: null },
+      { label: 'Owners', value: 'OWNER' },
+      { label: 'Managers', value: 'PROJECT_MANAGER' },
+      { label: 'Contractors', value: 'CONTRACTOR' },
+      { label: 'Supervisors', value: 'SUPERVISOR' },
+      { label: 'Viewers', value: 'VIEWER' },
     ];
 
     return renderSection('Filters', 'funnel-outline', (
-      <View>
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterScrollContent}
-        >
-          {statusFilters.map((filter) => (
-            <TouchableOpacity
-              key={filter.value || 'all'}
-              style={[
-                styles.filterChip,
-                filterStatus === filter.value && styles.filterChipActive
-              ]}
-              onPress={() => setFilterStatus(filter.value)}
-              activeOpacity={0.7}
-            >
-              <Text style={[
-                styles.filterChipText,
-                filterStatus === filter.value && styles.filterChipTextActive
-              ]}>
-                {filter.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filterScrollContent}
+      >
+        {roleFilters.map((filter) => (
+          <TouchableOpacity
+            key={filter.value || 'all'}
+            style={[
+              styles.filterChip,
+              filterRole === filter.value && styles.filterChipActive
+            ]}
+            onPress={() => setFilterRole(filter.value)}
+            activeOpacity={0.7}
+          >
+            <Text style={[
+              styles.filterChipText,
+              filterRole === filter.value && styles.filterChipTextActive
+            ]}>
+              {filter.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
     ));
   };
 
-  const renderQuickActions = () => {
-    const selectedProject = projects.find(p => p.id === selectedProjectId);
-    
-    return renderSection('Quick Actions', 'flash-outline', (
+  const renderQuickActions = () => (
+    renderSection('Quick Actions', 'flash-outline', (
       <View style={styles.quickActionsGrid}>
         <TouchableOpacity 
           style={styles.quickActionCard}
-          onPress={handleCreateMilestone}
+          onPress={handleAddMember}
           activeOpacity={0.7}
         >
           <View style={[styles.quickActionIcon, { backgroundColor: '#0066ff15' }]}>
-            <Ionicons name="add-circle" size={24} color={theme.colors.accent} />
+            <Ionicons name="person-add" size={24} color={theme.colors.accent} />
           </View>
-          <Text style={styles.quickActionLabel}>Create Milestone</Text>
-          <Text style={styles.quickActionDescription}>Add a custom milestone</Text>
+          <Text style={styles.quickActionLabel}>Add Member</Text>
+          <Text style={styles.quickActionDescription}>Invite a team member</Text>
         </TouchableOpacity>
 
-        {selectedProject && (
-          <TouchableOpacity 
-            style={styles.quickActionCard}
-            onPress={() => handleCreateFromTemplate(selectedProject.type as any)}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.quickActionIcon, { backgroundColor: '#10B98115' }]}>
-              <Ionicons name="library" size={24} color="#10B981" />
-            </View>
-            <Text style={styles.quickActionLabel}>Use Template</Text>
-            <Text style={styles.quickActionDescription}>{selectedProject.type} project</Text>
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity 
+          style={styles.quickActionCard}
+          onPress={() => {/* Navigate to permissions screen */}}
+          activeOpacity={0.7}
+        >
+          <View style={[styles.quickActionIcon, { backgroundColor: '#10B98115' }]}>
+            <Ionicons name="shield-checkmark" size={24} color="#10B981" />
+          </View>
+          <Text style={styles.quickActionLabel}>Manage Roles</Text>
+          <Text style={styles.quickActionDescription}>Set permissions</Text>
+        </TouchableOpacity>
       </View>
-    ));
-  };
+    ))
+  );
 
-  const renderMilestoneCard = ({ item: milestone }: { item: any }) => {
-    const isOverdue = new Date(milestone.plannedEnd) < new Date() && milestone.status !== 'COMPLETED';
-    const status = isOverdue ? 'DELAYED' : milestone.status;
-    const daysRemaining = Math.ceil((new Date(milestone.plannedEnd).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-    
+  const renderMemberCard = ({ item: member }: { item: TeamMember }) => {
     return (
       <TouchableOpacity
-        style={styles.milestoneCard}
-        onPress={() => handleMilestonePress(milestone.id)}
+        style={styles.memberCard}
+        onPress={() => handleMemberPress(member)}
         activeOpacity={0.7}
       >
-        <View style={styles.milestoneHeader}>
-          <View style={styles.milestoneIconContainer}>
+        <View style={styles.memberHeader}>
+          <View style={styles.memberIconContainer}>
             <View style={[
-              styles.milestoneIcon,
-              { backgroundColor: `${getMilestoneColor(status)}15` }
+              styles.memberIcon,
+              { backgroundColor: `${getRoleColor(member.role)}15` }
             ]}>
               <Ionicons 
-                name={getMilestoneIcon(status)} 
+                name={getRoleIcon(member.role)} 
                 size={20} 
-                color={getMilestoneColor(status)} 
+                color={getRoleColor(member.role)} 
               />
             </View>
           </View>
           
-          <View style={styles.milestoneInfo}>
-            <Text style={styles.milestoneName} numberOfLines={1}>
-              {milestone.name}
+          <View style={styles.memberInfo}>
+            <Text style={styles.memberName} numberOfLines={1}>
+              {formatUserName(member.user.firstName, member.user.lastName)}
             </Text>
-            <Text style={styles.milestoneDescription} numberOfLines={2}>
-              {milestone.description || 'No description provided'}
+            <Text style={styles.memberEmail} numberOfLines={1}>
+              {member.user.email}
             </Text>
           </View>
           
-          <View style={styles.milestoneStatus}>
+          <View style={styles.memberStatus}>
             <View style={[
-              styles.statusBadge,
-              { backgroundColor: `${getMilestoneColor(status)}20` }
+              styles.roleBadge,
+              { backgroundColor: `${getRoleColor(member.role)}20` }
             ]}>
               <Text style={[
-                styles.statusText,
-                { color: getMilestoneColor(status) }
+                styles.roleText,
+                { color: getRoleColor(member.role) }
               ]}>
-                {status.replace('_', ' ')}
+                {getRoleLabel(member.role)}
               </Text>
             </View>
           </View>
         </View>
 
-        <View style={styles.milestoneProgress}>
-          <View style={styles.progressMeta}>
-            <Text style={styles.progressLabel}>Progress</Text>
-            <Text style={styles.progressValue}>{milestone.progressPercentage}%</Text>
-          </View>
-          <View style={styles.progressBarContainer}>
-            <View 
-              style={[
-                styles.progressBar,
-                { 
-                  width: `${milestone.progressPercentage}%`,
-                  backgroundColor: getMilestoneColor(status)
-                }
-              ]} 
-            />
-          </View>
-        </View>
-
-        <View style={styles.milestoneFooter}>
-          <View style={styles.dateInfo}>
+        <View style={styles.memberFooter}>
+          <View style={styles.memberMeta}>
             <Ionicons name="calendar-outline" size={14} color={theme.colors.textSecondary} />
-            <Text style={styles.dateText}>
-              {new Date(milestone.plannedEnd).toLocaleDateString('en-IN', {
+            <Text style={styles.memberJoinDate}>
+              Joined {new Date(member.joinedAt).toLocaleDateString('en-IN', {
                 day: 'numeric',
-                month: 'short'
+                month: 'short',
+                year: 'numeric'
               })}
             </Text>
           </View>
           
-          <Text style={[
-            styles.daysRemaining,
-            { color: isOverdue ? '#EF4444' : theme.colors.textSecondary }
-          ]}>
-            {isOverdue 
-              ? `${Math.abs(daysRemaining)} days overdue`
-              : `${daysRemaining} days left`
-            }
-          </Text>
+          <View style={styles.memberActions}>
+            {member.user.phone && (
+              <TouchableOpacity 
+                style={styles.actionButton}
+                onPress={() => handleCallMember(member.user.phone)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="call-outline" size={16} color={theme.colors.accent} />
+              </TouchableOpacity>
+            )}
+            
+            {user?.role === 'OWNER' && member.role !== 'OWNER' && (
+              <TouchableOpacity 
+                style={[styles.actionButton, { backgroundColor: '#EF444415' }]}
+                onPress={() => handleRemoveMember(member)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="trash-outline" size={16} color="#EF4444" />
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       </TouchableOpacity>
     );
   };
 
-  const renderMilestonesList = () => (
-    renderSection('Milestones', 'flag-outline', (
-      milestones.length === 0 ? (
+  const filteredMembers = filterRole 
+    ? members.filter(member => member.role === filterRole)
+    : members;
+
+  const renderTeamList = () => (
+    renderSection('Team Members', 'people-outline', (
+      filteredMembers.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Ionicons name="flag-outline" size={48} color={theme.colors.gray300} />
-          <Text style={styles.emptyText}>No milestones found</Text>
+          <Ionicons name="people-outline" size={48} color={theme.colors.gray300} />
+          <Text style={styles.emptyText}>No team members found</Text>
           <Text style={styles.emptyDescription}>
-            Create milestones to track your project progress
+            {filterRole ? 'No members match the selected filter' : 'Add team members to collaborate on this project'}
           </Text>
-          <TouchableOpacity 
-            style={styles.emptyAction}
-            onPress={handleCreateMilestone}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.emptyActionText}>Create First Milestone</Text>
-          </TouchableOpacity>
+          {!filterRole && (
+            <TouchableOpacity 
+              style={styles.emptyAction}
+              onPress={handleAddMember}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.emptyActionText}>Add First Member</Text>
+            </TouchableOpacity>
+          )}
         </View>
       ) : (
         <FlatList
-          data={milestones}
-          renderItem={renderMilestoneCard}
+          data={filteredMembers}
+          renderItem={renderMemberCard}
           keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}
           scrollEnabled={false}
@@ -433,7 +444,7 @@ export const MilestoneListScreen: React.FC = () => {
           <Ionicons name="business-outline" size={64} color={theme.colors.gray300} />
           <Text style={styles.emptyText}>No Projects Found</Text>
           <Text style={styles.emptyDescription}>
-            Create a project first to manage milestones
+            Create a project first to manage team members
           </Text>
         </View>
       </SafeAreaView>
@@ -445,13 +456,13 @@ export const MilestoneListScreen: React.FC = () => {
       <StatusBar barStyle="dark-content" backgroundColor={theme.colors.background} />
       
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Milestones</Text>
+        <Text style={styles.headerTitle}>Team</Text>
         <TouchableOpacity 
           style={styles.headerAction}
-          onPress={handleCreateMilestone}
+          onPress={handleAddMember}
           activeOpacity={0.7}
         >
-          <Ionicons name="add" size={24} color={theme.colors.accent} />
+          <Ionicons name="person-add" size={24} color={theme.colors.accent} />
         </TouchableOpacity>
       </View>
 
@@ -469,9 +480,9 @@ export const MilestoneListScreen: React.FC = () => {
       >
         {projects.length > 1 && renderProjectSelector()}
         {selectedProjectId && renderOverview()}
-        {selectedProjectId && milestones.length > 0 && renderFilters()}
+        {selectedProjectId && members.length > 0 && renderFilters()}
         {selectedProjectId && renderQuickActions()}
-        {selectedProjectId && renderMilestonesList()}
+        {selectedProjectId && renderTeamList()}
       </ScrollView>
     </SafeAreaView>
   );
@@ -549,49 +560,37 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 20,
   },
-  progressContainer: {
+  teamSizeContainer: {
     marginBottom: 20,
   },
-  progressHeader: {
+  teamSizeHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    backgroundColor: theme.colors.gray50,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.gray200,
   },
-  progressTitle: {
+  teamSizeTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: theme.colors.text,
   },
-  progressPercentage: {
-    fontSize: 18,
+  teamSizeValue: {
+    fontSize: 20,
     fontWeight: '700',
-    color: theme.colors.text,
-  },
-  progressBarContainer: {
-    height: 8,
-    backgroundColor: theme.colors.gray200,
-    borderRadius: 4,
-    overflow: 'hidden',
-    marginBottom: 8,
-  },
-  progressBar: {
-    height: '100%',
-    borderRadius: 4,
-  },
-  progressInfo: {
-    alignItems: 'center',
-  },
-  progressText: {
-    fontSize: 14,
-    fontWeight: '600',
+    color: theme.colors.accent,
   },
   quickStatsGrid: {
     flexDirection: 'row',
     gap: 12,
+    flexWrap: 'wrap',
   },
   quickStatCard: {
     flex: 1,
+    minWidth: 100,
     backgroundColor: theme.colors.gray50,
     borderRadius: 12,
     padding: 16,
@@ -699,92 +698,79 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     textAlign: 'center',
   },
-  milestoneCard: {
+  memberCard: {
     backgroundColor: theme.colors.background,
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
     borderColor: theme.colors.gray200,
   },
-  milestoneHeader: {
+  memberHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     marginBottom: 12,
   },
-  milestoneIconContainer: {
+  memberIconContainer: {
     marginRight: 12,
   },
-  milestoneIcon: {
+  memberIcon: {
     width: 40,
     height: 40,
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  milestoneInfo: {
+  memberInfo: {
     flex: 1,
     marginRight: 12,
   },
-  milestoneName: {
+  memberName: {
     fontSize: 16,
     fontWeight: '600',
     color: theme.colors.text,
     marginBottom: 4,
   },
-  milestoneDescription: {
+  memberEmail: {
     fontSize: 14,
     color: theme.colors.textSecondary,
-    lineHeight: 20,
   },
-  milestoneStatus: {
+  memberStatus: {
     alignItems: 'flex-end',
   },
-  statusBadge: {
+  roleBadge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
   },
-  statusText: {
+  roleText: {
     fontSize: 11,
     fontWeight: '600',
-    textTransform: 'capitalize',
   },
-  milestoneProgress: {
-    marginBottom: 12,
-  },
-  progressMeta: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  progressLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: theme.colors.textSecondary,
-  },
-  progressValue: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: theme.colors.text,
-  },
-  milestoneFooter: {
+  memberFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  dateInfo: {
+  memberMeta: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  dateText: {
+  memberJoinDate: {
     fontSize: 12,
     color: theme.colors.textSecondary,
     marginLeft: 4,
   },
-  daysRemaining: {
-    fontSize: 12,
-    fontWeight: '500',
+  memberActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  actionButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: `${theme.colors.accent}15`,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   separator: {
     height: 12,

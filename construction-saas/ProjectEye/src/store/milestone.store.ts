@@ -3,6 +3,7 @@ import { milestoneApi } from '../api/endpoints/milestone.api';
 
 interface Milestone {
   id: string;
+  projectId: string;
   name: string;
   description?: string;
   plannedStart: string;
@@ -13,6 +14,8 @@ interface Milestone {
   status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'DELAYED';
   order: number;
   parentId?: string;
+  createdAt: string;
+  updatedAt: string;
   _count?: {
     progressUpdates: number;
     subMilestones?: number;
@@ -156,7 +159,7 @@ export const useMilestoneStore = create<MilestoneState>((set) => ({
     try {
       set({ isLoading: true, error: null });
       
-      const response = await milestoneApi.createFromTemplate(projectId, projectType);
+      const response = await milestoneApi.createFromTemplate(projectId, projectType as 'RESIDENTIAL' | 'COMMERCIAL');
       if (response.success) {
         set({ isLoading: false });
       }

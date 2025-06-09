@@ -5,13 +5,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../theme';
 import { ProjectNavigator } from './ProjectNavigator';
 import { ProgressNavigator } from './ProgressNavigator';
-import { FinancialNavigator } from './FinancialNavigator';  // Change this import
+import { FinancialNavigator } from './FinancialNavigator';
+import { MilestoneNavigator } from './MilestoneNavigator';
+import { TeamNavigator } from './TeamNavigator';
 import { SettingsScreen } from '../screens/settings/SettingsScreen';
 
 export type TabParamList = {
   Projects: undefined;
   Progress: { projectId?: string };
   Financial: { projectId?: string };
+  Milestones: { projectId?: string };
+  Team: { projectId?: string };
   More: undefined;
 };
 
@@ -40,6 +44,12 @@ const TabNavigatorComponent: React.FC = () => {
               break;
             case 'Financial':
               iconName = focused ? 'wallet' : 'wallet-outline';
+              break;
+            case 'Milestones':
+              iconName = focused ? 'flag' : 'flag-outline';
+              break;
+            case 'Team':
+              iconName = focused ? 'people' : 'people-outline';
               break;
             case 'More':
               iconName = focused ? 'menu' : 'menu-outline';
@@ -87,8 +97,18 @@ const TabNavigatorComponent: React.FC = () => {
       />
       <Tab.Screen 
         name="Financial" 
-        component={FinancialNavigator}  // Change this to FinancialNavigator
-        options={{ title: 'Financial', headerShown: false }}  // Add headerShown: false
+        component={FinancialNavigator}
+        options={{ title: 'Financial', headerShown: false }}
+      />
+      <Tab.Screen 
+        name="Milestones" 
+        component={MilestoneNavigator}
+        options={{ title: 'Milestones', headerShown: false }}
+      />
+      <Tab.Screen 
+        name="Team" 
+        component={TeamNavigator}
+        options={{ title: 'Team', headerShown: false }}
       />
       <Tab.Screen 
         name="More" 

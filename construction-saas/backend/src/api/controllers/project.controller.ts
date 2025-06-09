@@ -107,6 +107,22 @@ export class ProjectController {
     }
   );
 
+  static getMembers = asyncHandler(
+    async (req: Request, res: Response, next: NextFunction) => {
+      const { projectId } = req.params;
+      
+      const members = await ProjectService.getMembers(
+        projectId,
+        req.user!.organizationId
+      );
+
+      res.json({
+        success: true,
+        data: { members },
+      });
+    }
+  );
+
   static getStats = asyncHandler(
     async (req: Request, res: Response, next: NextFunction) => {
       const { projectId } = req.params;

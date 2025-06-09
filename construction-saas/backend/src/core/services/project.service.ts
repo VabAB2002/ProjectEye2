@@ -305,6 +305,47 @@ export class ProjectService {
     logger.info(`Member ${userId} removed from project ${projectId}`);
   }
 
+  static async getMembers(projectId: string, organizationId: string) {
+    // Verify project belongs to organization
+    const project = await prisma.project.findFirst({
+      where: {
+        id: projectId,
+        organizationId,
+      },
+    });
+
+    if (!project) {
+      throw new AppError('Project not found', 404);
+    }
+
+    // Get all project members with user details
+    const members = await prisma.projectMember.findMany({
+      where: {
+        projectId,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            phone: true,
+            role: true,
+            createdAt: true,
+          },
+        },
+      },
+      orderBy: {
+        joinedAt: 'asc',
+      },
+    });
+
+    logger.info(`Retrieved ${members.length} members for project ${projectId}`);
+
+    return members;
+  }
+
   static async getProjectStats(projectId: string, organizationId: string) {
     const project = await prisma.project.findFirst({
       where: {

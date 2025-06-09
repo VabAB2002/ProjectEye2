@@ -62,26 +62,15 @@ router.get(
   ProjectController.getStats
 );
 
-// Manage project members - requires add members permission
-router.post(
+// Manage project members
+router.get(
   '/:projectId/members',
-  addMemberValidator,
-  validate,
-  checkProjectAccess,
-  checkProjectPermission('canAddMembers'),
-  ProjectController.addMember
-);
-
-router.delete(
-  '/:projectId/members/:userId',
   projectIdValidator,
   validate,
   checkProjectAccess,
-  checkProjectPermission('canAddMembers'),
-  ProjectController.removeMember
+  ProjectController.getMembers
 );
 
-// Manage project members - requires add members permission
 router.post(
   '/:projectId/members',
   addMemberValidator,
