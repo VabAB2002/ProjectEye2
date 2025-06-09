@@ -1,4 +1,4 @@
-import { apiClient } from '../client';
+import { api } from '../client';
 
 export interface TeamMember {
   id: string;
@@ -41,25 +41,25 @@ export interface AddTeamMemberInput {
 export const teamApi = {
   // Get all team members for a project
   getMembers: async (projectId: string) => {
-    const response = await apiClient.get(`/projects/${projectId}/members`);
+    const response = await api.get(`/projects/${projectId}/members`);
     return response.data;
   },
 
   // Add a new team member
   addMember: async (projectId: string, data: AddTeamMemberInput) => {
-    const response = await apiClient.post(`/projects/${projectId}/members`, data);
+    const response = await api.post(`/projects/${projectId}/members`, data);
     return response.data;
   },
 
   // Remove a team member
   removeMember: async (projectId: string, userId: string) => {
-    const response = await apiClient.delete(`/projects/${projectId}/members/${userId}`);
+    const response = await api.delete(`/projects/${projectId}/members/${userId}`);
     return response.data;
   },
 
   // Update team member role/permissions (when backend supports it)
   updateMember: async (projectId: string, userId: string, data: Partial<AddTeamMemberInput>) => {
-    const response = await apiClient.patch(`/projects/${projectId}/members/${userId}`, data);
+    const response = await api.patch(`/projects/${projectId}/members/${userId}`, data);
     return response.data;
   },
 };

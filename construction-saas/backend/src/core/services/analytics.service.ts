@@ -379,6 +379,136 @@ export class AnalyticsService {
     };
   }
 
+  // Get dashboard data (simplified overview)
+  static async getDashboardData(projectId: string, organizationId: string) {
+    const overview = await this.getProjectOverview(projectId, organizationId);
+    return {
+      project: overview.project,
+      metrics: {
+        totalSpent: overview.financial.expenses,
+        budgetUtilization: overview.financial.utilized,
+        progressUpdates: overview.progress.updates,
+        completedMilestones: overview.progress.milestones.completed,
+        totalMilestones: overview.progress.milestones.total,
+        teamMembers: overview.team.totalMembers,
+        pendingApprovals: 0, // Will be calculated from transactions
+      },
+    };
+  }
+
+  // Get progress trends for charts
+  static async getProgressTrends(projectId: string, days: number = 30) {
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    const progressUpdates = await prisma.progressUpdate.findMany({
+      where: {
+        projectId,
+        date: { gte: startDate },
+      },
+      select: {
+        date: true,
+        workersCount: true,
+        weatherConditions: true,
+        issues: true,
+      },
+      orderBy: { date: 'asc' },
+    });
+
+    return progressUpdates.map(update => ({
+      date: update.date.toISOString().split('T')[0],
+      workerCount: update.workersCount || 0,
+      weatherCondition: update.weatherConditions,
+      hasIssues: update.issues?.toLowerCase().includes('issue') || update.issues?.toLowerCase().includes('delay') || false,
+    }));
+  }
+
+  // Get budget burn rate
+  static async getBudgetBurnRate(projectId: string) {
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+      select: { totalBudget: true, startDate: true, estimatedEndDate: true },
+    });
+
+    if (!project) {
+      throw new AppError('Project not found', 404);
+    }
+
+    const expenses = await prisma.transaction.findMany({
+      where: {
+        projectId,
+        type: 'EXPENSE',
+        approvalStatus: 'APPROVED',
+      },
+      select: {
+        amount: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    let cumulativeSpent = 0;
+    const burnRate = expenses.map(expense => {
+      cumulativeSpent += Number(expense.amount);
+      return {
+        date: expense.createdAt.toISOString().split('T')[0],
+        cumulativeSpent,
+        budgetRemaining: Number(project.totalBudget) - cumulativeSpent,
+      };
+    });
+
+    const totalDays = project.estimatedEndDate && project.startDate 
+      ? Math.ceil((project.estimatedEndDate.getTime() - project.startDate.getTime()) / (1000 * 60 * 60 * 24))
+      : 0;
+
+    const dailyBudgetTarget = Number(project.totalBudget) && totalDays 
+      ? Number(project.totalBudget) / totalDays 
+      : 0;
+
+    return {
+      burnRate,
+      project: {
+        budget: Number(project.totalBudget),
+        dailyBudgetTarget: Math.round(dailyBudgetTarget * 100) / 100,
+        totalDays,
+      },
+    };
+  }
+
+  // Get milestone timeline
+  static async getMilestoneTimeline(projectId: string) {
+    const milestones = await prisma.milestone.findMany({
+      where: { projectId },
+      select: {
+        id: true,
+        name: true,
+        status: true,
+        plannedStart: true,
+        plannedEnd: true,
+        actualStart: true,
+        actualEnd: true,
+        progressPercentage: true,
+      },
+      orderBy: { plannedStart: 'asc' },
+    });
+
+    const timeline = milestones.map(milestone => ({
+      id: milestone.id,
+      title: milestone.name,
+      status: milestone.status,
+      startDate: milestone.plannedStart,
+      endDate: milestone.plannedEnd,
+      actualStart: milestone.actualStart,
+      actualEnd: milestone.actualEnd,
+      progress: milestone.progressPercentage || 0,
+      isDelayed: milestone.plannedEnd && milestone.status !== 'COMPLETED' 
+        ? new Date() > milestone.plannedEnd 
+        : false,
+    }));
+
+    return timeline;
+  }
+
   // Get organization-wide analytics
   static async getOrganizationAnalytics(organizationId: string) {
     const projects = await prisma.project.findMany({

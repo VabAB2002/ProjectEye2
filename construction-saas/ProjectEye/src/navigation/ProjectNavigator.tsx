@@ -3,12 +3,16 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ProjectsScreen } from '../screens/projects/ProjectsScreen';
 import { ProjectDetailsScreen } from '../screens/projects/ProjectDetailsScreen';
 import { CreateProjectScreen } from '../screens/projects/CreateProjectScreen';
+import { SimpleAnalyticsScreen } from '../screens/analytics/SimpleAnalyticsScreen';
+import { SimpleReportsScreen } from '../screens/analytics/SimpleReportsScreen';
 import { theme } from '../theme';
 
 export type ProjectStackParamList = {
   ProjectsList: undefined;
   ProjectDetails: { projectId: string };
   CreateProject: undefined;
+  SimpleAnalytics: { projectId: string };
+  SimpleReports: { projectId: string };
 };
 
 const Stack = createNativeStackNavigator<ProjectStackParamList>();
@@ -40,6 +44,16 @@ export const ProjectNavigator: React.FC = () => {
         name="CreateProject" 
         component={CreateProjectScreen}
         options={{ title: 'Create Project' }}
+      />
+      <Stack.Screen 
+        name="SimpleAnalytics" 
+        component={SimpleAnalyticsScreen}
+        options={{ title: 'Project Health' }}
+      />
+      <Stack.Screen 
+        name="SimpleReports" 
+        component={SimpleReportsScreen}
+        options={{ title: 'Share Reports' }}
       />
     </Stack.Navigator>
   );

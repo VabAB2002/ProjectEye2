@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authRouter } from './auth.routes';
 import { projectRouter } from './project.routes';
+import { analyticsRouter } from './analytics.routes';
 
 export const apiRouter = Router();
 
@@ -19,3 +20,6 @@ apiRouter.use('/auth', authRouter);
 
 // Project routes
 apiRouter.use('/projects', projectRouter);
+
+// Analytics routes
+apiRouter.use('/analytics', analyticsRouter);

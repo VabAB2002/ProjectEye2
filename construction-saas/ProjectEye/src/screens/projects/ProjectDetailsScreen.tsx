@@ -9,7 +9,8 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRoute, RouteProp } from '@react-navigation/native';
+import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../theme';
 import { useProjectStore } from '../../store/project.store';
@@ -19,6 +20,7 @@ type RouteProps = RouteProp<ProjectStackParamList, 'ProjectDetails'>;
 
 export const ProjectDetailsScreen: React.FC = () => {
   const route = useRoute<RouteProps>();
+  const navigation = useNavigation<NativeStackNavigationProp<ProjectStackParamList>>();
   const { projectId } = route.params;
   const { currentProject, currentProjectStats, isLoading, selectProject } = useProjectStore();
 
@@ -79,6 +81,25 @@ export const ProjectDetailsScreen: React.FC = () => {
     </View>
   );
 
+  const renderActionButton = (
+    icon: keyof typeof Ionicons.glyphMap,
+    title: string,
+    subtitle: string,
+    onPress: () => void,
+    color: string = theme.colors.accent
+  ) => (
+    <TouchableOpacity style={styles.actionButton} onPress={onPress}>
+      <View style={[styles.actionIconContainer, { backgroundColor: `${color}15` }]}>
+        <Ionicons name={icon} size={24} color={color} />
+      </View>
+      <View style={styles.actionContent}>
+        <Text style={styles.actionTitle}>{title}</Text>
+        <Text style={styles.actionSubtitle}>{subtitle}</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+    </TouchableOpacity>
+  );
+
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView 
@@ -132,6 +153,24 @@ export const ProjectDetailsScreen: React.FC = () => {
               '#EF4444'
             )}
           </View>
+        </View>
+
+        {/* Analytics Actions */}
+        <View style={styles.actionsContainer}>
+          {renderActionButton(
+            'heart',
+            'Project Health',
+            'Simple view of your project status',
+            () => navigation.navigate('SimpleAnalytics', { projectId }),
+            '#10B981'
+          )}
+          {renderActionButton(
+            'chatbubbles',
+            'Share Reports',
+            'WhatsApp & SMS ready reports',
+            () => navigation.navigate('SimpleReports', { projectId }),
+            '#3B82F6'
+          )}
         </View>
 
         {/* Financial Overview */}
@@ -342,6 +381,47 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     fontWeight: '500',
     textAlign: 'center',
+  },
+
+  // Actions Styles
+  actionsContainer: {
+    marginHorizontal: 16,
+    marginTop: 16,
+    gap: 12,
+  },
+  actionButton: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  actionIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  actionContent: {
+    flex: 1,
+  },
+  actionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 4,
+  },
+  actionSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontWeight: '400',
   },
 
   // Section Styles
