@@ -13,6 +13,11 @@ export const progressApi = {
     return response.data;
   },
 
+  getById: async (projectId: string, updateId: string) => {
+    const response = await api.get<ApiResponse<any>>(`/projects/${projectId}/progress/${updateId}`);
+    return response.data;
+  },
+
   getByDate: async (projectId: string, date: string) => {
     const response = await api.get<ApiResponse<any>>(`/projects/${projectId}/progress/date/${date}`);
     return response.data;

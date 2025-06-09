@@ -8,6 +8,7 @@ import {
   Alert,
   TouchableOpacity,
   Image,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -169,7 +170,7 @@ export const CreateProgressScreen: React.FC = () => {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.dateContainer}>
           <Text style={styles.label}>Date</Text>
@@ -184,15 +185,20 @@ export const CreateProgressScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
 
-        <Input
-          label="Work Description *"
-          placeholder="Describe the work completed today..."
-          value={formData.workDescription}
-          onChangeText={(text) => setFormData({ ...formData, workDescription: text })}
-          multiline
-          numberOfLines={4}
-          style={styles.textArea}
-        />
+        {/* Work Description - Using direct TextInput for multiline */}
+        <View style={styles.inputSection}>
+          <Text style={styles.label}>Work Description *</Text>
+          <TextInput
+            style={styles.textArea}
+            placeholder="Describe the work completed today..."
+            value={formData.workDescription}
+            onChangeText={(text) => setFormData({ ...formData, workDescription: text })}
+            multiline
+            numberOfLines={4}
+            textAlignVertical="top"
+            placeholderTextColor={theme.colors.gray500}
+          />
+        </View>
 
         <View style={styles.weatherContainer}>
           <Text style={styles.label}>Weather Conditions</Text>
@@ -228,24 +234,33 @@ export const CreateProgressScreen: React.FC = () => {
           </ScrollView>
         </View>
 
-        <Input
-          label="Number of Workers"
-          placeholder="Enter number of workers"
-          value={formData.workersCount}
-          onChangeText={(text) => setFormData({ ...formData, workersCount: text })}
-          keyboardType="numeric"
-          icon="people-outline"
-        />
+        {/* Number of Workers - Using direct TextInput */}
+        <View style={styles.inputSection}>
+          <Text style={styles.label}>Number of Workers (Optional)</Text>
+          <TextInput
+            style={styles.singleLineInput}
+            placeholder="Enter number of workers"
+            value={formData.workersCount}
+            onChangeText={(text) => setFormData({ ...formData, workersCount: text })}
+            keyboardType="numeric"
+            placeholderTextColor={theme.colors.gray500}
+          />
+        </View>
 
-        <Input
-          label="Issues/Delays (Optional)"
-          placeholder="Any issues or delays faced today..."
-          value={formData.issues}
-          onChangeText={(text) => setFormData({ ...formData, issues: text })}
-          multiline
-          numberOfLines={3}
-          style={styles.textArea}
-        />
+        {/* Issues/Delays - Using direct TextInput for multiline */}
+        <View style={styles.inputSection}>
+          <Text style={styles.label}>Issues/Delays (Optional)</Text>
+          <TextInput
+            style={styles.textArea}
+            placeholder="Any issues or delays faced today..."
+            value={formData.issues}
+            onChangeText={(text) => setFormData({ ...formData, issues: text })}
+            multiline
+            numberOfLines={3}
+            textAlignVertical="top"
+            placeholderTextColor={theme.colors.gray500}
+          />
+        </View>
 
         {renderPhotoSection()}
 
@@ -317,19 +332,40 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     fontWeight: '500',
   },
-  textArea: {
-    minHeight: 120,
-    textAlignVertical: 'top',
+  inputSection: {
     backgroundColor: '#ffffff',
     marginHorizontal: 16,
     marginTop: 16,
-    borderRadius: 16,
     padding: 20,
+    borderRadius: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
+  },
+  textArea: {
+    backgroundColor: '#f9fafb',
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    fontSize: 16,
+    color: theme.colors.text,
+    minHeight: 120,
+    textAlignVertical: 'top',
+  },
+  singleLineInput: {
+    backgroundColor: '#f9fafb',
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    fontSize: 16,
+    color: theme.colors.text,
+    minHeight: 48,
   },
   weatherContainer: {
     backgroundColor: '#ffffff',

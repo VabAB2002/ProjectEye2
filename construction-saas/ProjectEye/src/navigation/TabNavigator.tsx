@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../theme';
 import { ProjectNavigator } from './ProjectNavigator';
 import { ProgressNavigator } from './ProgressNavigator';
-import { FinancialScreen } from '../screens/financial/FinancialScreen';
+import { FinancialNavigator } from './FinancialNavigator';  // Change this import
 import { SettingsScreen } from '../screens/settings/SettingsScreen';
 
 export type TabParamList = {
@@ -87,8 +87,8 @@ const TabNavigatorComponent: React.FC = () => {
       />
       <Tab.Screen 
         name="Financial" 
-        component={FinancialScreen}
-        options={{ title: 'Financial' }}
+        component={FinancialNavigator}  // Change this to FinancialNavigator
+        options={{ title: 'Financial', headerShown: false }}  // Add headerShown: false
       />
       <Tab.Screen 
         name="More" 

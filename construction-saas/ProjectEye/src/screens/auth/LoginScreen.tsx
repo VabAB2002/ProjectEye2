@@ -9,6 +9,7 @@ import {
   Alert,
   TouchableOpacity,
   StatusBar,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -80,28 +81,46 @@ export const LoginScreen: React.FC = () => {
 
           {/* Form Section */}
           <View style={styles.formSection}>
-            <Input
-              label="Email or Phone"
-              placeholder="Enter your email or phone number"
-              value={emailOrPhone}
-              onChangeText={setEmailOrPhone}
-              icon="person-outline"
-              autoCapitalize="none"
-              keyboardType="email-address"
-              variant="filled"
-            />
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Email or Phone</Text>
+              <View style={styles.textInputWrapper}>
+                <Ionicons name="person-outline" size={20} color={theme.colors.gray500} style={styles.leftIcon} />
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Enter your email or phone number"
+                  value={emailOrPhone}
+                  onChangeText={setEmailOrPhone}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  placeholderTextColor={theme.colors.gray500}
+                />
+              </View>
+            </View>
 
-            <Input
-              label="Password"
-              placeholder="Enter your password"
-              value={password}
-              onChangeText={setPassword}
-              icon="lock-closed-outline"
-              rightIcon={showPassword ? 'eye-off-outline' : 'eye-outline'}
-              onRightIconPress={() => setShowPassword(!showPassword)}
-              secureTextEntry={!showPassword}
-              variant="filled"
-            />
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Password</Text>
+              <View style={styles.textInputWrapper}>
+                <Ionicons name="lock-closed-outline" size={20} color={theme.colors.gray500} style={styles.leftIcon} />
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Enter your password"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  placeholderTextColor={theme.colors.gray500}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowPassword(!showPassword)}
+                  style={styles.rightIcon}
+                >
+                  <Ionicons 
+                    name={showPassword ? 'eye-off-outline' : 'eye-outline'} 
+                    size={20} 
+                    color={theme.colors.gray500} 
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
 
             <TouchableOpacity style={styles.forgotPasswordContainer}>
               <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
@@ -215,6 +234,39 @@ const styles = StyleSheet.create({
   },
   formSection: {
     flex: 1,
+  },
+  inputContainer: {
+    marginBottom: theme.spacing.lg,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.text,
+    marginBottom: theme.spacing.sm,
+    letterSpacing: 0.2,
+  },
+  textInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.gray50,
+    borderRadius: theme.borderRadius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.gray200,
+    paddingHorizontal: theme.spacing.lg,
+    minHeight: 48,
+  },
+  leftIcon: {
+    marginRight: theme.spacing.sm,
+  },
+  textInput: {
+    flex: 1,
+    fontSize: 16,
+    color: theme.colors.text,
+    fontWeight: '500',
+  },
+  rightIcon: {
+    padding: theme.spacing.xs,
+    marginLeft: theme.spacing.sm,
   },
   forgotPasswordContainer: {
     alignSelf: 'flex-end',

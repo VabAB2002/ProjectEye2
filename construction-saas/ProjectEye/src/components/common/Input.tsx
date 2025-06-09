@@ -32,12 +32,19 @@ export const Input: React.FC<InputProps> = ({
   variant = 'filled',
   size = 'medium',
   style,
+  multiline,
+  numberOfLines,
   ...props
 }) => {
   const [isFocused, setIsFocused] = useState(false);
 
   const getContainerStyle = () => {
-    const baseStyle = [styles.inputContainer, styles[variant], styles[`${size}Container`]];
+    const baseStyle = [
+      styles.inputContainer, 
+      styles[variant], 
+      styles[`${size}Container`],
+      multiline && styles.multilineContainer
+    ];
     
     if (isFocused) {
       baseStyle.push(styles.focused);
@@ -56,6 +63,17 @@ export const Input: React.FC<InputProps> = ({
     return theme.colors.gray500;
   };
 
+  const getInputStyle = () => {
+    const baseInputStyle = [
+      styles.input,
+      styles[`${size}Input`],
+      multiline && styles.multilineInput,
+      style
+    ];
+    
+    return baseInputStyle;
+  };
+
   return (
     <View style={styles.container}>
       {label && (
@@ -65,7 +83,7 @@ export const Input: React.FC<InputProps> = ({
       )}
       
       <View style={getContainerStyle()}>
-        {icon && (
+        {icon && !multiline && (
           <Ionicons
             name={icon}
             size={size === 'small' ? 18 : size === 'large' ? 24 : 20}
@@ -75,18 +93,17 @@ export const Input: React.FC<InputProps> = ({
         )}
         
         <TextInput
-          style={[
-            styles.input,
-            styles[`${size}Input`],
-            style
-          ]}
+          style={getInputStyle()}
           placeholderTextColor={theme.colors.gray500}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
+          multiline={multiline}
+          numberOfLines={numberOfLines}
+          textAlignVertical={multiline ? 'top' : 'center'}
           {...props}
         />
         
-        {rightIcon && (
+        {rightIcon && !multiline && (
           <TouchableOpacity 
             onPress={onRightIconPress}
             style={styles.rightIconContainer}
@@ -143,6 +160,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.gray200,
     backgroundColor: theme.colors.background,
+    overflow: 'hidden',
+  },
+  multilineContainer: {
+    alignItems: 'flex-start',
+    minHeight: 100,
   },
   default: {
     backgroundColor: theme.colors.transparent,
@@ -201,7 +223,14 @@ const styles = StyleSheet.create({
     flex: 1,
     color: theme.colors.text,
     fontWeight: '500',
-    paddingVertical: 0,
+    paddingVertical: Platform.OS === 'ios' ? 4 : 8,
+    paddingHorizontal: 0,
+    minHeight: Platform.OS === 'ios' ? 26 : 32,
+  },
+  multilineInput: {
+    paddingTop: Platform.OS === 'ios' ? 8 : 12,
+    paddingBottom: Platform.OS === 'ios' ? 8 : 12,
+    minHeight: 80,
   },
   smallInput: {
     fontSize: 14,
