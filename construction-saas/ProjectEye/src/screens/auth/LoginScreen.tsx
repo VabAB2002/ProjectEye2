@@ -1,3 +1,4 @@
+// src/screens/auth/LoginScreen.tsx - Updated with registration navigation
 import React, { useState } from 'react';
 import {
   View,
@@ -13,12 +14,13 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '../../store/auth.store';
 import { Button } from '../../components/common/Button';
-import { Input } from '../../components/common/Input';
 import { theme } from '../../theme';
 
 export const LoginScreen: React.FC = () => {
+  const navigation = useNavigation<any>();
   const { login, isLoading, error, clearError } = useAuthStore();
   const [emailOrPhone, setEmailOrPhone] = useState('');
   const [password, setPassword] = useState('');
@@ -38,6 +40,10 @@ export const LoginScreen: React.FC = () => {
         err.response?.data?.error?.message || 'Invalid credentials'
       );
     }
+  };
+
+  const handleSignUp = () => {
+    navigation.navigate('RoleSelection');
   };
 
   React.useEffect(() => {
@@ -154,7 +160,7 @@ export const LoginScreen: React.FC = () => {
               <Text style={styles.signUpText}>
                 Don't have an account?{' '}
               </Text>
-              <TouchableOpacity>
+              <TouchableOpacity onPress={handleSignUp}>
                 <Text style={styles.signUpLink}>Sign Up</Text>
               </TouchableOpacity>
             </View>
