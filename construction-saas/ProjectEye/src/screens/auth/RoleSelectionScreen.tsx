@@ -80,8 +80,8 @@ export const RoleSelectionScreen: React.FC = () => {
   const handleContinue = () => {
     if (!selectedRole) return;
     
-    // Navigate to specific registration screen based on role
-    navigation.navigate('Registration', { role: selectedRole });
+    // Navigate to role-based login screen
+    navigation.navigate('RoleBasedLogin', { role: selectedRole });
   };
 
   const handleBackToLogin = () => {
@@ -210,7 +210,7 @@ export const RoleSelectionScreen: React.FC = () => {
             styles.continueButtonText,
             !selectedRole && styles.continueButtonTextDisabled
           ]}>
-            Continue Registration
+            Continue to Login
           </Text>
           <Ionicons 
             name="arrow-forward" 

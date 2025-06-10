@@ -149,6 +149,15 @@ export const LoginScreen: React.FC = () => {
             </View>
 
             <Button
+              title="Role-Based Login"
+              variant="outline"
+              icon="people-outline"
+              onPress={() => navigation.navigate('RoleSelection')}
+              style={styles.roleLoginButton}
+              fullWidth
+            />
+
+            <Button
               title="Sign In with Google"
               variant="outline"
               icon="logo-google"
@@ -286,6 +295,9 @@ const styles = StyleSheet.create({
   },
   loginButton: {
     marginBottom: theme.spacing.xl,
+  },
+  roleLoginButton: {
+    marginBottom: theme.spacing.lg,
   },
   dividerContainer: {
     flexDirection: 'row',

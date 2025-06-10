@@ -59,15 +59,22 @@ export interface OrganizationAnalytics {
     totalProjects: number;
     activeProjects: number;
     completedProjects: number;
-    totalSpent: number;
-    pendingApprovals: number;
+    onHoldProjects: number;
   };
-  recentProjects: Array<{
+  financial: {
+    totalBudget: number;
+    totalExpenses: number;
+    budgetUtilization: number;
+  };
+  projectTypes: Array<{
+    type: string;
+    count: number;
+  }>;
+  recentActivity: Array<{
     id: string;
     name: string;
     status: string;
-    budget: number;
-    createdAt: string;
+    lastUpdate: string;
   }>;
 }
 
@@ -94,6 +101,26 @@ export const analyticsApi = {
 
   getOrganizationAnalytics: async (): Promise<OrganizationAnalytics> => {
     const response = await api.get('/analytics/organization');
+    return response.data.data;
+  },
+
+  getProjectOverview: async (projectId: string) => {
+    const response = await api.get(`/analytics/projects/${projectId}/overview`);
+    return response.data.data;
+  },
+
+  getFinancialAnalytics: async (projectId: string) => {
+    const response = await api.get(`/analytics/projects/${projectId}/financial`);
+    return response.data.data;
+  },
+
+  getMilestoneAnalytics: async (projectId: string) => {
+    const response = await api.get(`/analytics/projects/${projectId}/milestones`);
+    return response.data.data;
+  },
+
+  getTeamAnalytics: async (projectId: string) => {
+    const response = await api.get(`/analytics/projects/${projectId}/team`);
     return response.data.data;
   },
 };

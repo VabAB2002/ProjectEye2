@@ -3,10 +3,12 @@ export const Colors = {
     primary: '#1a1a1a',
     secondary: '#ffffff',
     accent: '#0066ff',
+    accentLight: '#e6f3ff',
     
     // Semantic Colors
     success: '#00c851',
     warning: '#ffbb33',
+    warningLight: '#fff8e1',
     error: '#ff4444',
     info: '#33b5e5',
     

@@ -21,6 +21,15 @@ export interface LoginInput {
   password: string;
 }
 
+export interface RoleBasedLoginInput {
+  emailOrPhone: string;
+  password: string;
+  role: UserRole;
+  companyName?: string;
+  licenseNumber?: string;
+  budgetRange?: string;
+}
+
 // NEW: Role-specific registration types
 export type UserRole = 'VIEWER' | 'CONTRACTOR' | 'OWNER';
 
@@ -107,6 +116,12 @@ export interface Project {
   status: 'PLANNING' | 'ACTIVE' | 'ON_HOLD' | 'COMPLETED';
   createdAt: string;
   updatedAt: string;
+  teamMembers?: {
+    id: string;
+    userId: string;
+    user: User;
+    role: string;
+  }[];
 }
 
 export interface ProjectStats {

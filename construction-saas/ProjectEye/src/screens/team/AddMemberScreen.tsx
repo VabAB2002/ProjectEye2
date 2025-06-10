@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../theme';
 import { useTeamStore } from '../../store/team.store';
 import { AddTeamMemberInput } from '../../api/endpoints/team.api';
+import { authApi } from '../../api/endpoints/auth.api';
 
 interface RouteParams {
   projectId: string;
@@ -31,9 +32,11 @@ export const AddMemberScreen: React.FC = () => {
   
   const [fadeAnim] = useState(new Animated.Value(0));
   const [formData, setFormData] = useState({
-    name: '',
+    firstName: '',
+    lastName: '',
     email: '',
     phone: '',
+    password: '',
     role: 'VIEWER' as AddTeamMemberInput['role'],
   });
   const [permissions, setPermissions] = useState({
@@ -56,16 +59,6 @@ export const AddMemberScreen: React.FC = () => {
   // Auto-set permissions based on role
   useEffect(() => {
     switch (formData.role) {
-      case 'OWNER':
-        setPermissions({
-          canViewFinancials: true,
-          canApproveExpenses: true,
-          canEditProject: true,
-          canAddMembers: true,
-          canUploadDocuments: true,
-          canCreateMilestones: true,
-        });
-        break;
       case 'PROJECT_MANAGER':
         setPermissions({
           canViewFinancials: true,
@@ -118,8 +111,8 @@ export const AddMemberScreen: React.FC = () => {
   };
 
   const validateForm = () => {
-    if (!formData.name.trim()) {
-      Alert.alert('Validation Error', 'Name is required');
+    if (!formData.firstName.trim()) {
+      Alert.alert('Validation Error', 'First name is required');
       return false;
     }
     if (!formData.email.trim()) {
@@ -130,6 +123,18 @@ export const AddMemberScreen: React.FC = () => {
       Alert.alert('Validation Error', 'Please enter a valid email address');
       return false;
     }
+    if (!formData.password.trim()) {
+      Alert.alert('Validation Error', 'Password is required');
+      return false;
+    }
+    if (formData.password.length < 8) {
+      Alert.alert('Validation Error', 'Password must be at least 8 characters long');
+      return false;
+    }
+    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
+      Alert.alert('Validation Error', 'Password must contain at least one uppercase letter, one lowercase letter, and one number');
+      return false;
+    }
     return true;
   };
 
@@ -137,24 +142,47 @@ export const AddMemberScreen: React.FC = () => {
     if (!validateForm()) return;
 
     try {
-      // In a real app, you'd first create the user or find existing user by email
-      // For now, we'll simulate this with a generated userId
-      const tempUserId = `temp_${Date.now()}`;
+      // First, create/invite the user
+      const inviteData = {
+        email: formData.email,
+        phone: formData.phone || undefined,
+        firstName: formData.firstName,
+        lastName: formData.lastName || undefined,
+        password: formData.password,
+        role: formData.role,
+      };
+
+      console.log('Creating user with data:', inviteData);
+      const userResponse = await authApi.invite(inviteData);
       
+      if (!userResponse.success || !userResponse.data?.user) {
+        throw new Error('Failed to create user');
+      }
+
+      const createdUser = userResponse.data.user;
+      console.log('User created successfully:', createdUser.id);
+
+      // Then add the user to the project
       const memberData: AddTeamMemberInput = {
-        userId: tempUserId,
+        userId: createdUser.id,
         role: formData.role,
         permissions,
       };
 
+      console.log('Adding member to project with data:', memberData);
       await addMember(projectId, memberData);
+      
       Alert.alert(
         'Success', 
         'Team member invited successfully!',
         [{ text: 'OK', onPress: () => navigation.goBack() }]
       );
-    } catch (error) {
-      Alert.alert('Error', 'Failed to invite team member. Please try again.');
+    } catch (error: any) {
+      console.error('Error inviting team member:', error);
+      const errorMessage = error.response?.data?.error?.message || 
+                          error.message || 
+                          'Failed to invite team member. Please try again.';
+      Alert.alert('Error', errorMessage);
     }
   };
 
@@ -196,7 +224,6 @@ export const AddMemberScreen: React.FC = () => {
     { value: 'CONTRACTOR', label: 'Contractor', description: 'Can upload documents and track progress' },
     { value: 'SUPERVISOR', label: 'Supervisor', description: 'Can manage milestones and view financials' },
     { value: 'PROJECT_MANAGER', label: 'Project Manager', description: 'Full access except ownership transfer' },
-    { value: 'OWNER', label: 'Owner', description: 'Complete control over the project' },
   ];
 
   const renderSection = (title: string, icon: keyof typeof Ionicons.glyphMap, content: React.ReactNode) => (
@@ -219,12 +246,23 @@ export const AddMemberScreen: React.FC = () => {
     renderSection('Member Information', 'person-outline', (
       <View>
         <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>Full Name *</Text>
+          <Text style={styles.inputLabel}>First Name *</Text>
           <TextInput
             style={styles.textInput}
-            value={formData.name}
-            onChangeText={(value) => handleInputChange('name', value)}
-            placeholder="Enter member's full name"
+            value={formData.firstName}
+            onChangeText={(value) => handleInputChange('firstName', value)}
+            placeholder="Enter first name"
+            placeholderTextColor={theme.colors.gray400}
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Last Name</Text>
+          <TextInput
+            style={styles.textInput}
+            value={formData.lastName}
+            onChangeText={(value) => handleInputChange('lastName', value)}
+            placeholder="Enter last name"
             placeholderTextColor={theme.colors.gray400}
           />
         </View>
@@ -243,15 +281,31 @@ export const AddMemberScreen: React.FC = () => {
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>Phone Number (Optional)</Text>
+          <Text style={styles.inputLabel}>Phone Number</Text>
           <TextInput
             style={styles.textInput}
             value={formData.phone}
             onChangeText={(value) => handleInputChange('phone', value)}
-            placeholder="+1 (555) 123-4567"
+            placeholder="+91xxxxxxxxxx"
             placeholderTextColor={theme.colors.gray400}
             keyboardType="phone-pad"
           />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Password *</Text>
+          <TextInput
+            style={styles.textInput}
+            value={formData.password}
+            onChangeText={(value) => handleInputChange('password', value)}
+            placeholder="Enter secure password"
+            placeholderTextColor={theme.colors.gray400}
+            secureTextEntry
+            autoCapitalize="none"
+          />
+          <Text style={styles.passwordHint}>
+            Must be 8+ characters with uppercase, lowercase, and number
+          </Text>
         </View>
       </View>
     ))
@@ -505,6 +559,12 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
     borderWidth: 1,
     borderColor: theme.colors.gray200,
+  },
+  passwordHint: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    marginTop: 4,
+    lineHeight: 16,
   },
   roleCard: {
     backgroundColor: theme.colors.gray50,

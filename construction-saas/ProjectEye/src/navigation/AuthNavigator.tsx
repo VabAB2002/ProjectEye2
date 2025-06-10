@@ -3,6 +3,7 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { LoginScreen } from '../screens/auth/LoginScreen';
 import { RoleSelectionScreen } from '../screens/auth/RoleSelectionScreen';
+import { RoleBasedLoginScreen } from '../screens/auth/RoleBasedLoginScreen';
 import { RegistrationScreen } from '../screens/auth/RegistrationScreen';
 import { theme } from '../theme';
 import { UserRole } from '../api/types';
@@ -10,6 +11,7 @@ import { UserRole } from '../api/types';
 export type AuthStackParamList = {
   Login: undefined;
   RoleSelection: undefined;
+  RoleBasedLogin: { role: UserRole };
   Registration: { role: UserRole };
   ForgotPassword: undefined;
 };
@@ -39,6 +41,13 @@ export const AuthNavigator: React.FC = () => {
         component={RoleSelectionScreen}
         options={{
           title: 'Choose Your Role'
+        }}
+      />
+      <Stack.Screen 
+        name="RoleBasedLogin" 
+        component={RoleBasedLoginScreen}
+        options={{
+          title: 'Sign In'
         }}
       />
       <Stack.Screen 
